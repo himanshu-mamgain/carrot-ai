@@ -1,6 +1,6 @@
 node_modules
-dist
-src
+# dist and src should not be here if we want to publish them
+
 tsconfig.json
 tsup.config.ts
 .gitignore
