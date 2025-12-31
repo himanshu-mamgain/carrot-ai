@@ -3,16 +3,16 @@
 [![npm version](https://img.shields.io/npm/v/carrot-ai.svg)](https://www.npmjs.com/package/carrot-ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Carrot AI** is a powerful, lightweight, and agentic AI SDK designed to bring the power of Llama models to your local applications via AWS Bedrock. Built with robustness and developer experience in mind, Carrot AI provides a seamless interface for chat, tool-calling, and autonomous agents.
+**Carrot AI** is a premium, agentic AI SDK designed for high-performance Llama applications. It seamlessly bridges **AWS Bedrock** and **Ollama**, providing a unified interface for streaming, parallel tool execution, and advanced memory management.
 
 ## ✨ Features
 
-- 🤖 **Agentic by Design**: Native support for tool calling and structured outputs.
-- 🦙 **Llama Powered**: Optimized for Meta's Llama 3/3.1 models.
-- 🌍 **Cloud & Local**: Works with **AWS Bedrock** (Cloud) and **Ollama** (Local).
-- 🛡️ **Robustness**: Built-in fallback mechanisms and advanced retry logic (exponential backoff).
-- ⚙️ **Fine-grained Control**: Easy adjustment of temperature, top-p, max tokens, and more.
-- 📦 **TypeScript First**: Fully typed for a superior developer experience.
+- 🌊 **Streaming Support**: Real-time response streaming for ultra-low perceived latency.
+- ⚡ **Parallel Tooling**: Execute multiple tool calls simultaneously to speed up complex workflows.
+- 🧠 **Memory Management**: Built-in `ConversationHistory` for automatic context pruning and message handling.
+- 🛡️ **Type Safety**: Native Zod validation for tool parameters and full TypeScript support.
+- 📊 **Audit Ready**: Integrated token usage tracking and performance metrics.
+- 🌍 **Cloud & Local**: Switch between AWS Bedrock (Production) and Ollama (Local Dev) with zero code changes.
 
 ## 🚀 Installation
 
@@ -22,100 +22,89 @@ npm install carrot-ai
 
 ## 🛠️ Quick Start
 
-### Option 1: Using AWS Bedrock (Cloud)
+### Basic Chat
 
 ```typescript
 import { CarrotAI } from 'carrot-ai';
 
 const carrot = new CarrotAI({
   provider: 'bedrock',
-  bedrock: {
-    region: 'us-east-1',
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-    }
-  }
+  bedrock: { region: 'us-east-1' }
 });
 
 const response = await carrot.chat({
   messages: [{ role: 'user', content: 'Hello!' }]
 });
+
+console.log(response.content);
 ```
 
-### Option 2: Using Ollama (Local)
+### Real-time Streaming
 
 ```typescript
-import { CarrotAI } from 'carrot-ai';
-
-const carrot = new CarrotAI({
-  provider: 'ollama',
-  ollama: {
-    baseUrl: 'http://localhost:11434' // Optional, defaults to localhost
+for await (const chunk of carrot.chatStream({
+  messages: [{ role: 'user', content: 'Tell me a long story.' }]
+})) {
+  if (chunk.type === 'content') {
+    process.stdout.write(chunk.content);
   }
-});
-
-const response = await carrot.chat({
-  messages: [{ role: 'user', content: 'Hello from local Llama!' }],
-  model: 'llama3' // Default for Ollama
-});
+}
 ```
 
-#### 🛠️ Local Setup (Ollama)
-1. **Install Ollama**: Download from [ollama.com](https://ollama.com/).
-2. **Download Model**: Run `ollama pull llama3` in your terminal.
-3. **Run**: Ensure Ollama is running on your machine (it starts automatically on port 11434).
+## 🧠 Advanced Usage: Agents & Memory
 
-
-
-## 🧠 Advanced Usage: Agents & Tools
-
-Carrot AI makes it easy to create agents that can perform tasks using external tools.
+Carrot AI Agents are autonomous and can use tools to perform complex tasks.
 
 ```typescript
-import { CarrotAgent, tool } from 'carrot-ai';
+import { CarrotAgent, tool, ConversationHistory } from 'carrot-ai';
 import { z } from 'zod';
 
-const weatherTool = tool({
-  name: 'get_weather',
-  description: 'Get the current weather in a given location',
-  parameters: z.object({
-    location: z.string().describe('The city and state, e.g. San Francisco, CA'),
-  }),
-  execute: async ({ location }) => {
-    return { temperature: '22°C', condition: 'Sunny' };
+const searchTool = tool({
+  name: 'web_search',
+  description: 'Search the web for current events',
+  parameters: z.object({ query: z.string() }),
+  execute: async ({ query }) => {
+    return { results: [`Information about ${query}`] };
   },
 });
 
 const agent = new CarrotAgent({
-  tools: [weatherTool],
+  tools: [searchTool],
+  memory: new ConversationHistory({ maxMessages: 50 }),
+  systemPrompt: 'You are a research assistant.'
 });
 
-const result = await agent.run('What is the weather in London?');
-console.log(result);
+const result = await agent.run('Who won the world cup in 2022?');
 ```
 
-## 🛡️ Fallback & Retry Logic
+## 📊 Observability
 
-Carrot AI automatically handles transient network errors and rate limits. You can also configure fallbacks:
+Track token usage across your application easily:
 
 ```typescript
-const response = await carrot.chat({
-  messages: [...],
-  fallbackModels: ['meta.llama3-8b-instruct-v1:0'],
-  retries: 3
+const carrot = new CarrotAI({
+  provider: 'bedrock',
+  onUsage: (usage) => {
+    console.log(`Used ${usage.totalTokens} tokens`);
+  }
 });
 ```
 
-## 📄 Configuration
+## 🛡️ Error Handling
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `model` | `string` | `meta.llama3-70b-instruct-v1:0` | The model ID to use |
-| `temperature` | `number` | `0.7` | Sampling temperature |
-| `maxTokens` | `number` | `2048` | Maximum tokens to generate |
-| `topP` | `number` | `0.9` | Nucleus sampling factor |
-| `stopSequences` | `string[]` | `[]` | Tokens that stop generation |
+Carrot AI provides specific error classes for granular control:
+
+```typescript
+try {
+  await carrot.chat({ ... });
+} catch (error) {
+  if (error instanceof CarrotAuthError) {
+    // Handle invalid credentials
+  } else if (error instanceof CarrotRateLimitError) {
+    // Handle throttling
+  }
+}
+```
 
 ## 📜 License
 

@@ -2,6 +2,12 @@ import { z } from 'zod';
 
 export type ProviderType = 'bedrock' | 'ollama';
 
+export interface Usage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
 export interface CarrotConfig {
   provider: ProviderType;
   bedrock?: {
@@ -15,13 +21,28 @@ export interface CarrotConfig {
   ollama?: {
     baseUrl?: string;
   };
+  systemInstruction?: string;
+  onUsage?: (usage: Usage) => void;
 }
 
-export type MessageRole = 'user' | 'assistant' | 'system';
+export type MessageRole = 'user' | 'assistant' | 'system' | 'tool';
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  parameters: any;
+}
+
+export interface ToolResult {
+  toolCallId: string;
+  content: string;
+  isError?: boolean;
+}
 
 export interface Message {
   role: MessageRole;
-  content: string;
+  content: string | ToolResult[];
+  toolCalls?: ToolCall[];
 }
 
 export interface ChatOptions {
@@ -33,17 +54,17 @@ export interface ChatOptions {
   stopSequences?: string[];
   retries?: number;
   fallbackModels?: string[];
+  systemInstruction?: string;
+  tools?: ToolDefinition[];
+  onUsage?: (usage: Usage) => void;
 }
 
 export interface ChatResponse {
   content: string;
   role: 'assistant';
-  usage?: {
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
-  };
+  usage: Usage;
   model: string;
+  toolCalls?: ToolCall[];
 }
 
 export interface ToolDefinition<P extends z.ZodTypeAny = any> {
@@ -52,3 +73,12 @@ export interface ToolDefinition<P extends z.ZodTypeAny = any> {
   parameters: P;
   execute: (args: z.infer<P>) => Promise<any>;
 }
+
+export interface StreamEvent {
+  type: 'content' | 'tool_call' | 'usage' | 'done';
+  content?: string;
+  toolCall?: ToolCall;
+  usage?: Usage;
+}
+
+export type ChatStream = AsyncIterable<StreamEvent>;
