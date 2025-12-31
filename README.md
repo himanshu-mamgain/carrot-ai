@@ -39,6 +39,25 @@ const response = await carrot.chat({
 console.log(response.content);
 ```
 
+### Local Dev (Ollama)
+
+```typescript
+const carrot = new CarrotAI({
+  provider: 'ollama' 
+});
+
+const response = await carrot.chat({
+  messages: [{ role: 'user', content: 'Hello from local Llama!' }],
+  model: 'llama3'
+});
+```
+
+#### 🛠️ Local Setup (Ollama)
+1. **Install Ollama**: Download from [ollama.com](https://ollama.com/).
+2. **Download Model**: Run `ollama pull llama3` in your terminal.
+3. **Run**: Ensure Ollama is running on your machine (automatically starts on port 11434).
+
+
 ### Real-time Streaming
 
 ```typescript
