@@ -1,6 +1,6 @@
 {
   "name": "carrot-ai",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Agentic AI SDK for Llama via AWS Bedrock with built-in retries and fallbacks.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
