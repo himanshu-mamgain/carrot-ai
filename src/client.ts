@@ -1,7 +1,7 @@
 import pRetry from 'p-retry';
-import { 
-  BedrockRuntimeClient, 
-  ConverseCommand, 
+import {
+  BedrockRuntimeClient,
+  ConverseCommand,
   ConverseStreamCommand,
   ToolConfiguration as BedrockToolConfig,
   Message as BedrockMessage,
@@ -11,20 +11,19 @@ import {
   ConverseCommandInput,
   ConverseStreamCommandInput
 } from "@aws-sdk/client-bedrock-runtime";
-import { 
-  CarrotConfig, 
-  ChatOptions, 
-  ChatResponse, 
-  Message, 
-  ToolDefinition, 
-  ChatStream, 
-  Usage,
-  ToolCall
+import {
+  CarrotConfig,
+  ChatOptions,
+  ChatResponse,
+  Message,
+  ToolDefinition,
+  ChatStream,
+  Usage
 } from './types';
-import { 
-  CarrotError, 
-  CarrotAuthError, 
-  CarrotRateLimitError 
+import {
+  CarrotError,
+  CarrotAuthError,
+  CarrotRateLimitError
 } from './errors';
 
 export class CarrotAI {
@@ -43,11 +42,14 @@ export class CarrotAI {
     }
   }
 
-  async chat(options: ChatOptions): Promise<ChatResponse> {
-    const { 
-      model = this.config.provider === 'bedrock' ? this.defaultBedrockModel : this.defaultOllamaModel, 
-      retries = 3, 
-      fallbackModels = [] 
+  /**
+   * Process your request with a crunch!
+   */
+  async crunch(options: ChatOptions): Promise<ChatResponse> {
+    const {
+      model = this.config.provider === 'bedrock' ? this.defaultBedrockModel : this.defaultOllamaModel,
+      retries = 3,
+      fallbackModels = []
     } = options;
 
     const runWithRetry = async (currentModel: string) => {
@@ -89,9 +91,12 @@ export class CarrotAI {
     }
   }
 
-  async *chatStream(options: ChatOptions): ChatStream {
+  /**
+   * Stream your response with a crunch!
+   */
+  async *crunchStream(options: ChatOptions): ChatStream {
     const model = options.model || (this.config.provider === 'bedrock' ? this.defaultBedrockModel : this.defaultOllamaModel);
-    
+
     if (this.config.provider === 'bedrock') {
       yield* this.invokeBedrockStream(model, options);
     } else {
@@ -103,8 +108,8 @@ export class CarrotAI {
     if (!this.bedrockClient) throw new CarrotError('Bedrock client not initialized');
 
     const systemText = options.systemInstruction || this.config.systemInstruction;
-    const system: SystemContentBlock[] | undefined = systemText 
-      ? [{ text: systemText } as any] 
+    const system: SystemContentBlock[] | undefined = systemText
+      ? [{ text: systemText } as any]
       : undefined;
 
     const input: ConverseCommandInput = {
@@ -123,7 +128,7 @@ export class CarrotAI {
     const command = new ConverseCommand(input);
 
     const response = await this.bedrockClient.send(command);
-    
+
     if (!response.output?.message) {
       throw new CarrotError('Invalid response from Bedrock');
     }
@@ -158,8 +163,8 @@ export class CarrotAI {
     if (!this.bedrockClient) throw new CarrotError('Bedrock client not initialized');
 
     const systemText = options.systemInstruction || this.config.systemInstruction;
-    const system: SystemContentBlock[] | undefined = systemText 
-      ? [{ text: systemText } as any] 
+    const system: SystemContentBlock[] | undefined = systemText
+      ? [{ text: systemText } as any]
       : undefined;
 
     const input: ConverseStreamCommandInput = {
@@ -205,7 +210,7 @@ export class CarrotAI {
 
   private async invokeOllama(modelId: string, options: ChatOptions): Promise<ChatResponse> {
     const baseUrl = this.config.ollama?.baseUrl || 'http://localhost:11434';
-    
+
     // Inject system message if present
     const messages = [...options.messages];
     const systemInstruction = options.systemInstruction || this.config.systemInstruction;
@@ -218,9 +223,9 @@ export class CarrotAI {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: modelId,
-        messages: messages.map(m => ({ 
-          role: m.role, 
-          content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) 
+        messages: messages.map(m => ({
+          role: m.role,
+          content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
         })),
         stream: false,
         options: {
@@ -255,7 +260,7 @@ export class CarrotAI {
 
   private async *invokeOllamaStream(modelId: string, options: ChatOptions): ChatStream {
     const baseUrl = this.config.ollama?.baseUrl || 'http://localhost:11434';
-    
+
     const messages = [...options.messages];
     const systemInstruction = options.systemInstruction || this.config.systemInstruction;
     if (systemInstruction) {
@@ -267,9 +272,9 @@ export class CarrotAI {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: modelId,
-        messages: messages.map(m => ({ 
-          role: m.role, 
-          content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) 
+        messages: messages.map(m => ({
+          role: m.role,
+          content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
         })),
         stream: true,
         options: {
@@ -292,7 +297,7 @@ export class CarrotAI {
 
       const chunk = decoder.decode(value);
       const lines = chunk.split('\n').filter(l => l.trim());
-      
+
       for (const line of lines) {
         const result = JSON.parse(line);
         if (result.message?.content) {
@@ -315,7 +320,7 @@ export class CarrotAI {
   private mapToBedrockMessages(messages: Message[]): BedrockMessage[] {
     return messages.map(m => {
       const content: BedrockContentBlock[] = [];
-      
+
       if (typeof m.content === 'string') {
         content.push({ text: m.content });
       } else if (Array.isArray(m.content)) {
@@ -351,7 +356,7 @@ export class CarrotAI {
 
   private mapToBedrockTools(tools?: ToolDefinition[]): BedrockToolConfig | undefined {
     if (!tools?.length) return undefined;
-    
+
     return {
       tools: tools.map(t => ({
         toolSpec: {
@@ -369,7 +374,7 @@ export class CarrotAI {
   private zodToJsonschema(schema: any): any {
     // In a real implementation, we might use 'zod-to-json-schema'
     // but for internal simplicity we just pass through or do basic mapping
-    return schema; 
+    return schema;
   }
 
   private triggerUsage(options: ChatOptions, usage: Usage) {

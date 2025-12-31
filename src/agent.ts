@@ -28,14 +28,17 @@ export class CarrotAgent {
     this.memory = config.memory || new ConversationHistory({ maxMessages: 20 });
   }
 
-  async run(prompt: string): Promise<string> {
+  /**
+   * Harvest the results of your agent's labor!
+   */
+  async harvest(prompt: string): Promise<string> {
     this.memory.addMessage({ role: 'user', content: prompt });
 
     let iterations = 0;
     const maxIterations = 10;
 
     while (iterations < maxIterations) {
-      const response = await this.ai.chat({
+      const response = await this.ai.crunch({
         messages: this.memory.getMessages(),
         systemInstruction: this.systemPrompt,
         tools: this.tools,
@@ -54,7 +57,7 @@ export class CarrotAgent {
 
       // Parallel tool execution
       const toolResults = await Promise.all(
-        response.toolCalls.map(async (tc): Promise<ToolResult> => {
+        response.toolCalls.map(async (tc: any): Promise<ToolResult> => {
           const tool = this.tools.find(t => t.name === tc.name);
           if (!tool) {
             return {

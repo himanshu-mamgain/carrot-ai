@@ -32,7 +32,8 @@ const carrot = new CarrotAI({
   bedrock: { region: 'us-east-1' }
 });
 
-const response = await carrot.chat({
+// Use .crunch() for a carrot-themed chat!
+const response = await carrot.crunch({
   messages: [{ role: 'user', content: 'Hello!' }]
 });
 
@@ -61,7 +62,8 @@ const response = await carrot.chat({
 ### Real-time Streaming
 
 ```typescript
-for await (const chunk of carrot.chatStream({
+// or .crunchStream() for streaming!
+for await (const chunk of carrot.crunchStream({
   messages: [{ role: 'user', content: 'Tell me a long story.' }]
 })) {
   if (chunk.type === 'content') {
@@ -93,7 +95,7 @@ const agent = new CarrotAgent({
   systemPrompt: 'You are a research assistant.'
 });
 
-const result = await agent.run('Who won the world cup in 2022?');
+const result = await agent.harvest('Who won the world cup in 2022?');
 ```
 
 ## 📊 Observability
